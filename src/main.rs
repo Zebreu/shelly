@@ -61,6 +61,7 @@ struct Resources {
     whale: Texture2D,
     gun: Texture2D,
     sword: Texture2D,
+    bird: Texture2D,
     background_01: Texture2D,
     background_02: Texture2D,
     background_03: Texture2D,
@@ -91,6 +92,9 @@ impl Resources {
 
         let whale = load_texture("assets/Whale/Whale(76x66)(Orange).png").await?;
         whale.set_filter(FilterMode::Nearest);
+
+        let bird = load_texture("assets/characters/bird.png").await?;
+        bird.set_filter(FilterMode::Nearest);
 
         let gun = load_texture("assets/Whale/Gun(92x32).png").await?;
         gun.set_filter(FilterMode::Nearest);
@@ -150,6 +154,7 @@ impl Resources {
             whale,
             gun,
             sword,
+            bird,
             background_01,
             background_02,
             background_03,
@@ -223,6 +228,7 @@ async fn join_quick_match(nakama: Handle<nodes::Nakama>) {
         next_frame().await;
     }
 }
+
 
 async fn network_game(nakama: Handle<nodes::Nakama>, game_type: GameType, network_id: String) {
     use nodes::{
