@@ -14,7 +14,7 @@ use nakama_rs::api_client::Event;
 
 use crate::{
     consts,
-    nodes::{pickup::ItemType, Nakama, Pickup, Player, RemotePlayer},
+    nodes::{pickup::ItemType, Nakama, Pickup, Player, RemotePlayer, Enemy, enemies::EnemyType},
     GameType, Resources,
 };
 
@@ -91,6 +91,18 @@ mod message {
     }
 
     #[derive(Debug, Clone, SerBin, DeBin, PartialEq)]
+    pub struct SpawnEnemy {
+        pub id: u32,
+        pub x: u16,
+        pub y: u16,
+        pub enemy_type: u8,
+    }
+    impl SpawnEnemy {
+        pub const OPCODE: i32 = 41;
+    }
+
+
+    #[derive(Debug, Clone, SerBin, DeBin, PartialEq)]
     pub struct DeleteItem {
         pub id: u32,
     }
@@ -127,6 +139,7 @@ pub struct NakamaRealtimeGame {
     network_cache: NetworkCache,
     remote_players: BTreeMap<String, Handle<RemotePlayer>>,
     pickups: BTreeMap<usize, Handle<Pickup>>,
+    enemies: BTreeMap<usize, Handle<Enemy>>,
     network_ids: BTreeSet<String>,
     shoot_pending: bool,
     ready: bool,
@@ -153,6 +166,7 @@ impl NakamaRealtimeGame {
             },
             network_id,
             pickups: BTreeMap::new(),
+            enemies: BTreeMap::new(),
             shoot_pending: false,
             ready: false,
             game_started: game_type == GameType::Deathmatch,
@@ -180,6 +194,20 @@ impl NakamaRealtimeGame {
             },
         );
     }
+
+    pub fn spawn_enemy(&mut self, id: usize, pos: Vec2, enemy_type: EnemyType) {
+        let mut nakama = scene::get_node(self.nakama);
+        nakama.api_client.socket_send(
+            message::SpawnEnemy::OPCODE,
+            &message::SpawnEnemy {
+                id: id as _,
+                x: pos.x as _,
+                y: pos.y as _,
+                enemy_type: enemy_type as _,
+            },
+        );
+    }
+
 
     pub fn delete_item(&mut self, id: usize) {
         let mut nakama = scene::get_node(self.nakama);
@@ -450,6 +478,28 @@ impl Node for NakamaRealtimeGame {
                                 ));
                                 if let Some(pickup) = node.pickups.insert(id as _, new_node) {
                                     if let Some(node) = scene::try_get_node(pickup) {
+                                        node.delete();
+                                    }
+                                }
+                            }
+                            message::SpawnEnemy::OPCODE => {
+                                let message::SpawnEnemy {
+                                    id,
+                                    x,
+                                    y,
+                                    enemy_type,
+                                } = DeBin::deserialize_bin(&data).unwrap();
+                                let pos = vec2(x as f32, y as f32);
+
+                                let new_node = scene::add_node(Enemy::new(
+                                    pos,
+                                    match enemy_type {
+                                        x if x == EnemyType::Bird as u8 => EnemyType::Bird,
+                                        _ => unreachable!(),
+                                    },
+                                ));
+                                if let Some(enemy) = node.enemies.insert(id as _, new_node) {
+                                    if let Some(node) = scene::try_get_node(enemy) {
                                         node.delete();
                                     }
                                 }

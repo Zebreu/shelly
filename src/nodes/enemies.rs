@@ -11,22 +11,22 @@ use crate::Resources;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(u8)]
-pub enum ItemType {
+pub enum EnemyType {
     Bird = 1,
 }
 
 pub struct Enemy {
     pub pos: Vec2,
-    pub item_type: ItemType,
+    pub enemy_type: EnemyType,
     visual_scale: f32,
 }
 
 impl Enemy {
-    pub fn new(pos: Vec2, item_type: ItemType) -> Enemy {
+    pub fn new(pos: Vec2, enemy_type: EnemyType) -> Enemy {
         Enemy {
             pos,
             visual_scale: 1.0,
-            item_type,
+            enemy_type,
         }
     }
 }
@@ -73,8 +73,8 @@ impl scene::Node for Enemy {
             flipped = true; 
         }
 
-        match node.item_type {
-            ItemType::Bird => draw_texture_ex(
+        match node.enemy_type {
+            EnemyType::Bird => draw_texture_ex(
                 resources.bird, 
                 node.pos.x, 
                 node.pos.y, 

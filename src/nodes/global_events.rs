@@ -7,7 +7,7 @@ use macroquad::{
 };
 
 use crate::{
-    nodes::{pickup::ItemType, NakamaRealtimeGame, Pickup, Player, RemotePlayer},
+    nodes::{pickup::ItemType, NakamaRealtimeGame, Pickup, Player, RemotePlayer, Enemy, enemies::EnemyType},
     Resources,
 };
 
@@ -15,7 +15,7 @@ pub struct GlobalEvents {
     last_spawn_time: f64,
     _player: Handle<Player>,
     spawned_items: Vec<(usize, Handle<Pickup>)>,
-
+    spawned_enemies: Vec<(usize, Handle<Enemy>)>,
     uid: usize,
     nakama: Handle<NakamaRealtimeGame>,
 }
@@ -30,8 +30,40 @@ impl GlobalEvents {
             last_spawn_time: 0.0,
             uid: 0,
             spawned_items: vec![],
+            spawned_enemies: vec![],
         }
     }
+}
+
+pub fn generate_position() -> Vec2 {
+    let resources = storage::get::<Resources>();
+
+    let tilewidth = resources.tiled_map.raw_tiled_map.tilewidth as f32;
+    let w = resources.tiled_map.raw_tiled_map.width as f32;
+    let tileheight = resources.tiled_map.raw_tiled_map.tileheight as f32;
+    let h = resources.tiled_map.raw_tiled_map.height as f32;
+
+    let pos = loop {
+        let x = rand::gen_range(0, w as i32) as f32;
+        let y = rand::gen_range(0, h as i32 - 6) as f32;
+
+        let pos = vec2((x + 0.5) * tilewidth, (y - 0.5) * tileheight);
+
+        if resources
+            .collision_world
+            .collide_solids(pos, tilewidth as _, tileheight as _)
+            == false
+            && resources.collision_world.collide_solids(
+                pos,
+                tilewidth as _,
+                tileheight as i32 * 3,
+            )
+            && Rect::new(5. * 32., 12. * 32., 8. * 32., 6. * 32.).contains(pos) == false
+        {
+            break pos;
+        }
+    };
+    pos
 }
 
 impl scene::Node for GlobalEvents {
@@ -45,33 +77,7 @@ impl scene::Node for GlobalEvents {
         if get_time() - node.last_spawn_time >= Self::SPAWN_INTERVAL as _
             && node.spawned_items.len() < 3
         {
-            let resources = storage::get::<Resources>();
-
-            let tilewidth = resources.tiled_map.raw_tiled_map.tilewidth as f32;
-            let w = resources.tiled_map.raw_tiled_map.width as f32;
-            let tileheight = resources.tiled_map.raw_tiled_map.tileheight as f32;
-            let h = resources.tiled_map.raw_tiled_map.height as f32;
-
-            let pos = loop {
-                let x = rand::gen_range(0, w as i32) as f32;
-                let y = rand::gen_range(0, h as i32 - 6) as f32;
-
-                let pos = vec2((x + 0.5) * tilewidth, (y - 0.5) * tileheight);
-
-                if resources
-                    .collision_world
-                    .collide_solids(pos, tilewidth as _, tileheight as _)
-                    == false
-                    && resources.collision_world.collide_solids(
-                        pos,
-                        tilewidth as _,
-                        tileheight as i32 * 3,
-                    )
-                    && Rect::new(5. * 32., 12. * 32., 8. * 32., 6. * 32.).contains(pos) == false
-                {
-                    break pos;
-                }
-            };
+            let pos = generate_position();
 
             node.last_spawn_time = get_time();
 
@@ -84,6 +90,14 @@ impl scene::Node for GlobalEvents {
             node.spawned_items
                 .push((item_id, scene::add_node(Pickup::new(pos, item_type))));
             nakama.spawn_item(item_id, pos, item_type);
+            
+            
+            let pos_enemy = generate_position();
+            let enemy_id = node.uid;
+            node.spawned_enemies.push(
+                (enemy_id, 
+                scene::add_node(Enemy::new(pos_enemy, EnemyType::Bird))));
+            nakama.spawn_enemy(enemy_id, pos_enemy, EnemyType::Bird);
 
             node.uid += 1;
         }
