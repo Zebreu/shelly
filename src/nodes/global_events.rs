@@ -91,15 +91,16 @@ impl scene::Node for GlobalEvents {
                 .push((item_id, scene::add_node(Pickup::new(pos, item_type))));
             nakama.spawn_item(item_id, pos, item_type);
             
-            
-            let pos_enemy = generate_position();
-            let enemy_id = node.uid;
-            node.spawned_enemies.push(
-                (enemy_id, 
-                scene::add_node(Enemy::new(pos_enemy, EnemyType::Bird))));
-            nakama.spawn_enemy(enemy_id, pos_enemy, EnemyType::Bird);
+            for _ in 0..3 {
+                let pos_enemy = generate_position();
+                let enemy_id = node.uid;
+                node.spawned_enemies.push(
+                    (enemy_id, 
+                    scene::add_node(Enemy::new(pos_enemy, EnemyType::Bird))));
+                nakama.spawn_enemy(enemy_id, pos_enemy, EnemyType::Bird);
 
-            node.uid += 1;
+                node.uid += 1;
+            }
         }
 
         let mut others = scene::find_nodes_by_type::<RemotePlayer>();
